@@ -43,7 +43,10 @@
   #scene{height:400px}
   #maxwell{height:300px}
   #foron{height:300px}
-  @media (max-width:860px){#scene{height:320px}}
+  @media (max-width:860px){
+    #scene{height:auto;aspect-ratio:1/1}
+    #foron{height:auto;aspect-ratio:1/1}
+  }
   .phase{font-size:14.5px;color:var(--muted);margin:8px 2px 0;min-height:20px}
   table{width:100%;border-collapse:collapse;font-size:14.5px}
   td{padding:4px 0;vertical-align:baseline}
@@ -257,14 +260,35 @@ function showResults(p, s){
 }
 
 /* ---------- rajzolás: közös ---------- */
-function setup(cv){
+// Mobil nézetben (a .grid egyoszloposra váltó töréspontja alatt) a #scene és a #foron
+// vászon négyzetes; a rajz geometriáját NEM rendezzük újra a szűk helyhez, hanem az
+// asztali elrendezést változatlanul megtartva, arányosan lekicsinyítve, középre igazítva
+// jelenítjük meg a négyzetben. A desktopRef az utoljára mért asztali méretet őrzi meg;
+// ha a lap közvetlenül mobil méretben töltődik be (nincs még mért asztali méret),
+// a FALLBACK_REF közelítő asztali méreteket használjuk.
+const MOBILE_BP = '(max-width:860px)';
+const isMobileLayout = () => matchMedia(MOBILE_BP).matches;
+const desktopRef = {};
+const FALLBACK_REF = { scene: {w:774, h:400}, foron: {w:365, h:300} };
+
+function setup(cv, refKey){
   const dpr = window.devicePixelRatio || 1;
   const w = cv.clientWidth, h = cv.clientHeight;
   cv.width = w*dpr; cv.height = h*dpr;
   const c = cv.getContext('2d');
   c.setTransform(dpr,0,0,dpr,0,0);
   c.clearRect(0,0,w,h);
-  return {c, w, h};
+
+  if (!refKey || !isMobileLayout()){
+    if (refKey) desktopRef[refKey] = {w, h};
+    return {c, w, h};
+  }
+
+  const ref = desktopRef[refKey] || FALLBACK_REF[refKey];
+  const scale = Math.min(w/ref.w, h/ref.h);
+  const ox = (w - ref.w*scale)/2, oy = (h - ref.h*scale)/2;
+  c.setTransform(dpr*scale, 0, 0, dpr*scale, dpr*ox, dpr*oy);
+  return {c, w: ref.w, h: ref.h};
 }
 const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
 
@@ -311,7 +335,7 @@ function hatch(c, x, y, w, h, col){
 
 /* ---------- rajzolás: animáció ---------- */
 function drawScene(p, s, st){
-  const {c, w, h} = setup($('scene'));
+  const {c, w, h} = setup($('scene'), 'scene');
   const ink = css('--ink'), muted = css('--muted'), line = css('--line');
 
   // vízszintes skála: a legnagyobb kitérés ~46 px legyen
@@ -522,7 +546,7 @@ function drawMaxwell(p, s){
 const NPER = 6;      // hány periódust mutasson az animáció és a görbék
 
 function drawForon(p, s, tNow){
-  const {c, w, h} = setup($('foron'));
+  const {c, w, h} = setup($('foron'), 'foron');
   const ink = css('--ink'), muted = css('--muted'), line = css('--line');
 
   const padL = 46, padR = 12, padT = 10, gap = 12;
