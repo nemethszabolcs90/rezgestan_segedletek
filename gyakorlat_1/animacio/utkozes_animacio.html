@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rezgéstan 1. gyakorlat — ütközés animáció</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --panel:#fff; --ink:#1a1a1a; --muted:#6b6b6b;
+    --line:#d8d8d4; --accent:#1d4ed8; --accent2:#b45309; --ok:#15803d;
+    --rod:#3f3f46; --ball:#0f766e; --nrm:#7c3aed;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17181a; --panel:#202124; --ink:#ececed; --muted:#a1a1aa;
+      --line:#3a3b3f; --accent:#7ea2ff; --accent2:#f0b429; --ok:#5ec27a;
+      --rod:#c9c9cf; --ball:#5eead4; --nrm:#c4a7ff;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15.5px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+  h1{font-size:22px;margin:0 0 2px}
+  .sub{color:var(--muted);margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;
+           color:var(--muted);margin:0 0 10px;font-weight:600}
+  label{display:grid;grid-template-columns:104px minmax(0,1fr) 74px;gap:10px;align-items:center;margin-bottom:11px}
+  label span{font-size:15px;white-space:nowrap}
+  input[type=range]{min-width:0;width:100%;accent-color:var(--accent);margin:0}
+  input[type=number]{width:100%;padding:6px 7px;border:1px solid var(--line);border-radius:6px;
+    background:var(--bg);color:var(--ink);font:14.5px ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right}
+  input[type=number]::-webkit-inner-spin-button{display:none}
+  .btns{display:flex;gap:8px;margin-top:12px}
+  button{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:7px;
+    background:var(--bg);color:var(--ink);font-size:14.5px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  canvas{width:100%;display:block;border-radius:8px;touch-action:none}
+  #scene{height:400px}
+  #maxwell{height:340px}
+  @media (max-width:860px){#scene{height:320px}}
+  .phase{font-size:14.5px;color:var(--muted);margin:8px 2px 0;min-height:20px}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  td{padding:4px 0;vertical-align:baseline}
+  td.v{text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
+  td.k{color:var(--muted);padding-right:10px}
+  .sec{font-weight:600;padding-top:9px}
+  .two{display:grid;grid-template-columns:1.35fr 1fr;gap:16px}
+  @media (max-width:860px){.two{grid-template-columns:1fr}}
+  .warn{color:var(--accent2);font-size:13.5px;margin-top:8px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .vissza-gomb{display:inline-block;margin:14px 0 0 16px;padding:7px 14px;
+    border:1px solid var(--line);border-radius:8px;text-decoration:none;
+    color:var(--accent);background:var(--panel);font-weight:600;font-size:14px}
+  .vissza-gomb:hover{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<a href="../../index.html" class="vissza-gomb">&#9664; Vissza a gyakorlatokhoz</a>
+<div class="wrap">
+
+<h1>Ütközés álló tengely körül elforduló rúddal</h1>
+<p class="sub">Rezgéstan, 1. gyakorlat — interaktív animáció és Maxwell-ábra</p>
+
+<div class="grid">
+
+  <!-- ============ VEZÉRLŐ ============ -->
+  <div>
+    <div class="card">
+      <h2>Paraméterek</h2>
+      <div id="params"></div>
+
+      <div style="margin-top:12px">
+        <span style="font-size:13px">Lassítás: <b id="slowTxt">10×</b></span>
+        <input type="range" id="slow" min="1" max="60" value="10">
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="run">Indítás</button>
+        <button id="pause">Szünet</button>
+        <button id="reset">Újra</button>
+      </div>
+      <div id="warn" class="warn"></div>
+    </div>
+  </div>
+
+  <!-- ============ ÁBRÁK + EREDMÉNY ============ -->
+  <div>
+    <div class="card">
+      <h2>Animáció</h2>
+      <canvas id="scene" height="420"></canvas>
+      <div class="phase" id="phase">Nyomd meg az „Indítás” gombot.</div>
+    </div>
+
+    <div class="two" style="margin-top:16px">
+      <div class="card">
+        <h2>Egyszerűsített Maxwell-ábra</h2>
+        <canvas id="maxwell" height="300"></canvas>
+      </div>
+
+      <div class="card">
+        <h2>Számított értékek</h2>
+        <table id="out"></table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- segédek ---------- */
+const $ = id => document.getElementById(id);
+const fmt = (x, d=3) => (Math.abs(x) < 5e-12 ? 0 : x).toFixed(d).replace('.', ',');
+
+/* ---------- fizika ---------- */
+function solve(p){
+  const b   = p.beta * Math.PI / 180;
+  const c1  = p.c1;                              // ütközés előtti sebesség (megadott adat)
+  const l   = p.a * Math.cos(b);                 // ütközési talppont távolsága a tengelytől
+
+  // A rúd (hossz 3a, csukló a bal végtől a-ra) tehetetlenségi nyomatéka a csuklóra
+  const ThA = (1/12) * p.m2 * Math.pow(3*p.a, 2) + p.m2 * Math.pow(p.a/2, 2);
+  const m2T = ThA / (l*l);                       // redukált tömeg
+
+  const c1n = c1 * Math.cos(b);
+  const c1t = c1 * Math.sin(b);
+  const c2Tn = 0;                                // a rúd áll: Ω2 = 0
+
+  const cSn  = (p.m1*c1n + m2T*c2Tn) / (p.m1 + m2T);
+  const v1n  = cSn + p.e * (cSn - c1n);
+  const v2Tn = cSn + p.e * (cSn - c2Tn);
+  const om2  = v2Tn / l;                         // rúd szögsebessége ütközés után (CCW +)
+
+  // irányvektorok (A = origó, x jobbra, y felfelé)
+  const n = { x:  Math.sin(b), y: -Math.cos(b) };   // ütközési normális
+  const t = { x: -Math.cos(b), y: -Math.sin(b) };   // érintő
+  // az m1 ütközés utáni sebességvektora (érintő komponens változatlan)
+  const v1 = { x: v1n*n.x + c1t*t.x, y: v1n*n.y + c1t*t.y };
+
+  // Ejtési magasság: ekkorából esve, nyugalomból indulva éri el a c₁ sebességet.
+  //   ½m₁c₁² = m₁gh  ⇒  h = c₁²/(2g)
+  const hMag = c1*c1 / (2*p.g);
+  // Ha ez nem férne a képre, a rajz tetejéről indítjuk, az ott érvényes sebességgel.
+  const yTop = Math.min(hMag, 0.34);
+  const v0   = Math.sqrt(Math.max(0, 2*p.g*(hMag - yTop)));
+  // A súlypont a csuklótól jobbra a/2-re van. CCW pozitív.
+  // M_r(θ) = M0 - k_t θ, M_g(θ) = -M0 cos θ.
+  // M0 = m2*g*a/2 biztosítja θ=0-ban az egyensúlyt bármely k_t>0 mellett.
+  const M0 = p.m2 * p.g * p.a / 2;
+  const preload = M0 / p.kt;
+  // Az energia alapján becsült első fordulópontok csak a látómezőt szabják meg.
+  // A mozgást továbbra is a teljes mozgásegyenletből integráljuk.
+  const Erod = 0.5*ThA*om2*om2;
+  const turningBound = sign => {
+    for(let j=1;j<=315;j++){
+      const angle=Math.min(Math.PI/2,j*0.005), q=sign*angle;
+      const potential=0.5*p.kt*q*q+M0*(Math.sin(q)-q);
+      if(potential>=Erod || angle===Math.PI/2) return angle;
+    }
+    return Math.PI/2;
+  };
+  const swingBound=Math.max(turningBound(1),turningBound(-1));
+  return {swingBound,M0,preload,c1,l,ThA,m2T,c1n,c1t,c2Tn,cSn,v1n,v2Tn,om2,n,t,v1,
+          hMag, yTop, v0, csonkolt: hMag > yTop + 1e-9,
+          tErk: (c1 - v0) / p.g};
+}
+
+/* ---------- vezérlők (csúszka + számmező) ---------- */
+const PARAMS = [
+  {k:'c1',   cim:'c<sub>1</sub>', egys:'m/s', min:1,    max:2.5,step:0.05, val:1.5},
+  {k:'m1',   cim:'m<sub>1</sub>', egys:'kg',  min:0.5,  max:30, step:0.5,  val:6},
+  {k:'m2',   cim:'m<sub>2</sub>', egys:'kg',  min:0.5,  max:30, step:0.5,  val:6},
+  {k:'beta', cim:'β',             egys:'°',   min:15,   max:75, step:1,    val:60},
+  {k:'e',    cim:'e',             egys:'–',   min:0,    max:1,  step:0.05, val:1},
+  {k:'kt',   cim:'k<sub>t</sub>', egys:'Nm/rad', min:10, max:100,step:1, val:40},
+  {k:'a',    cim:'a',             egys:'m',   min:0.15, max:0.5,step:0.01, val:0.3},
+];
+
+function buildControls(){
+  $('params').innerHTML = PARAMS.map(q => `
+    <label title="${q.egys}">
+      <span>${q.cim} <small style="color:var(--muted)">[${q.egys}]</small></span>
+      <input type="range"  id="${q.k}_s" min="${q.min}" max="${q.max}" step="${q.step}" value="${q.val}">
+      <input type="number" id="${q.k}"   min="${q.min}" max="${q.max}" step="${q.step}" value="${q.val}">
+    </label>`).join('');
+
+  for (const q of PARAMS){
+    const num = $(q.k), rng = $(q.k + '_s');
+    // csúszka → számmező
+    rng.addEventListener('input', () => { num.value = rng.value; changed(); });
+    // számmező → csúszka (a csúszka tartományán kívüli érték is megengedett)
+    num.addEventListener('input', () => {
+      const v = parseFloat(num.value);
+      if (isFinite(v)) rng.value = Math.min(q.max, Math.max(q.min, v));
+      changed();
+    });
+  }
+}
+function changed(){ running = false; t = 0; last = 0; recompute(); updateButtons(); }
+
+const G = 9.81;                      // a nehézségi gyorsulás fix érték
+
+function readParams(){
+  const p = { g: G };
+  for (const k of ['c1','m1','m2','beta','e','a','kt']) p[k] = parseFloat($(k).value);
+  return p;
+}
+function validate(p){
+  for (const k in p) if (!isFinite(p[k])) return 'Hiányzó vagy hibás érték: ' + k;
+  if (p.beta <= 0 || p.beta >= 90) return 'β legyen 0 és 90° között.';
+  if (p.e < 0 || p.e > 1) return 'e legyen 0 és 1 között.';
+  if (p.m1 <= 0 || p.m2 <= 0 || p.a <= 0 || p.c1 <= 0 || p.kt <= 0)
+    return 'c₁, a tömegek, a és kₜ legyen pozitív.';
+  return '';
+}
+
+/* ---------- eredménytáblázat ---------- */
+function showResults(p, s){
+  const rows = [
+    ['sec','Ütközés előtt',''],
+    ['','<i>c</i><sub>1</sub> (megadott)', fmt(s.c1) + ' m/s'],
+    ['','<i>h</i> = <i>c</i><sub>1</sub>²/(2<i>g</i>)', fmt(s.hMag, 3) + ' m'],
+    ['','<i>c</i><sub>1n</sub> = <i>c</i><sub>1</sub>·cos β', fmt(s.c1n) + ' m/s'],
+    ['','<i>c</i><sub>1t</sub> = <i>c</i><sub>1</sub>·sin β', fmt(s.c1t) + ' m/s'],
+    ['','<i>c</i><sub>2Tn</sub> = <i>l</i>·Ω<sub>2</sub>', fmt(s.c2Tn) + ' m/s'],
+    ['sec','Redukálás',''],
+    ['','<i>l</i> = <i>a</i>·cos β', fmt(s.l) + ' m'],
+    ['','Θ<sub>A</sub>', fmt(s.ThA, 4) + ' kg·m²'],
+    ['','<i>m</i><sub>2T</sub> = Θ<sub>A</sub>/<i>l</i>²', fmt(s.m2T, 2) + ' kg'],
+    ['sec','Ütközés',''],
+    ['','<i>c</i><sub>Sn</sub> = <i>v</i><sub>Sn</sub>', fmt(s.cSn) + ' m/s'],
+    ['','<i>v</i><sub>1n</sub>', fmt(s.v1n) + ' m/s'],
+    ['','<i>v</i><sub>1t</sub> = <i>c</i><sub>1t</sub>', fmt(s.c1t) + ' m/s'],
+    ['','<i>v</i><sub>2Tn</sub>', fmt(s.v2Tn) + ' m/s'],
+    ['','ω<sub>2</sub> = <i>v</i><sub>2Tn</sub>/<i>l</i>', fmt(s.om2) + ' rad/s'],
+  ];
+  $('out').innerHTML = rows.map(([cls,k,v]) =>
+    cls === 'sec' ? `<tr><td class="sec" colspan="2">${k}</td></tr>`
+                  : `<tr><td class="k">${k}</td><td class="v">${v}</td></tr>`).join('');
+}
+
+/* ---------- rajzolás: közös ---------- */
+function setup(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w*dpr; cv.height = h*dpr;
+  const c = cv.getContext('2d');
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);
+  return {c, w, h};
+}
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+
+function arrow(c, x1,y1, x2,y2, col, head=7, lw=2){
+  c.strokeStyle = col; c.fillStyle = col; c.lineWidth = lw;
+  c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+  const ang = Math.atan2(y2-y1, x2-x1);
+  c.beginPath(); c.moveTo(x2,y2);
+  c.lineTo(x2-head*Math.cos(ang-0.4), y2-head*Math.sin(ang-0.4));
+  c.lineTo(x2-head*Math.cos(ang+0.4), y2-head*Math.sin(ang+0.4));
+  c.closePath(); c.fill();
+}
+function label(c, txt, x, y, col, size=13, align='left'){
+  c.fillStyle = col; c.font = `italic ${size}px Georgia, serif`;
+  c.textAlign = align; c.textBaseline = 'middle';
+  c.fillText(txt, x, y);
+}
+
+/* ---------- rajzolás: animáció ---------- */
+function drawScene(p, s, st){
+  const {c, w, h} = setup($('scene'));
+  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
+
+  // világ → képernyő (A = origó). A lépték FIX, nem igazodik a-hoz — így a rúd
+  // hossza (3a) a csúszka húzásakor láthatóan változik. A keret csak akkor tágul,
+  // ha a számmezőbe a csúszka tartományán kívüli a értéket írnak.
+  const fullTurn = s.swingBound >= Math.PI/2;
+  const xmin = Math.min(-0.85, -(fullTurn ? 2 : 1)*p.a-0.15);
+  const xmax = Math.max(1.15,2*p.a+0.15);
+  const extentY = Math.max(0.65,2*p.a*Math.sin(s.swingBound)+0.15);
+  const ymin = -extentY, ymax = extentY;
+  const k = Math.min(w/(xmax-xmin), h/(ymax-ymin)) * 0.96;
+  const ox = w/2 - k*(xmin+xmax)/2, oy = h/2 + k*(ymin+ymax)/2;
+  const X = x => ox + k*x, Y = y => oy - k*y;
+
+  // talaj / állvány jelzés a csuklónál
+  c.strokeStyle = line; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(X(-0.075), Y(-0.05)); c.lineTo(X(0.075), Y(-0.05)); c.stroke();
+  for (let i=-3;i<=3;i++){
+    const xx = X(i*0.025);
+    c.beginPath(); c.moveTo(xx, Y(-0.05)); c.lineTo(xx-6, Y(-0.05)+8); c.stroke();
+  }
+
+  // egyensúlyi (vízszintes) helyzet szaggatva
+  c.save(); c.setLineDash([4,4]); c.strokeStyle = line;
+  c.beginPath(); c.moveTo(X(-p.a), Y(0)); c.lineTo(X(2*p.a), Y(0)); c.stroke(); c.restore();
+
+  // rúd az aktuális θ szöggel
+  const th = st.theta;
+  const rot = (x,y) => ({x: x*Math.cos(th) - y*Math.sin(th), y: x*Math.sin(th) + y*Math.cos(th)});
+  const B = rot(-p.a, 0), E = rot(2*p.a, 0), S2 = rot(p.a/2, 0);
+  c.strokeStyle = css('--rod'); c.lineWidth = 7; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(X(B.x), Y(B.y)); c.lineTo(X(E.x), Y(E.y)); c.stroke();
+  c.lineCap = 'butt';
+
+  // Előfeszített torziós rugó: egyik szár az állványé, a másik a rúddal fordul.
+  // A spirál jelképes, képernyőmérete nem a rugó fizikai mérete.
+  {
+    const sx = X(0), sy = Y(0);
+    const r0 = Math.max(5,Math.min(10,k*0.03)), r1 = Math.max(13,Math.min(26,k*0.085));
+    const start = -Math.PI/2;
+    const turn = 4.5*Math.PI + th;
+    c.save();
+    c.strokeStyle = css('--accent2'); c.lineWidth = 2.3;
+    c.beginPath();
+    c.moveTo(sx, sy + r0 + 20); c.lineTo(sx, sy + r0);
+    for(let i=0;i<=150;i++){
+      const u=i/150, r=r0+(r1-r0)*u, ang=start+turn*u;
+      c.lineTo(sx+r*Math.cos(ang), sy-r*Math.sin(ang));
+    }
+    c.lineTo(sx+(r1+9)*Math.cos(th), sy-(r1+9)*Math.sin(th));
+    c.stroke();
+    c.strokeStyle = muted; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(sx-10,sy+r0+20); c.lineTo(sx+10,sy+r0+20); c.stroke();
+    for(let i=-1;i<=1;i++){
+      c.beginPath();c.moveTo(sx+i*7,sy+r0+20);c.lineTo(sx+i*7-5,sy+r0+25);c.stroke();
+    }
+    label(c, 'k', sx+5, sy-r1-18, css('--accent2'),15);
+    label(c, 't', sx+12, sy-r1-14, css('--accent2'),10);
+    c.restore();
+  }
+
+  // súlypont és csukló
+  c.fillStyle = css('--accent2');
+  c.beginPath(); c.arc(X(S2.x), Y(S2.y), 3.5, 0, 7); c.fill();
+  label(c, 'S₂', X(S2.x)+9, Y(S2.y)-15, muted, 13);
+  c.fillStyle = css('--panel'); c.strokeStyle = ink; c.lineWidth = 2;
+  c.beginPath(); c.arc(X(0), Y(0), 6, 0, 7); c.fill(); c.stroke();
+  label(c, 'A', X(0)+30, Y(0)+24, ink, 13);
+
+  // ütközési normális és a talppont (csak ütközés előtt / alatt)
+  if (st.phase < 2){
+    const L = Math.max(0.20, 0.85*p.a);
+    const bx = -p.a, by = 0;
+    c.save(); c.setLineDash([5,4]); c.strokeStyle = css('--nrm'); c.lineWidth = 1.4;
+    c.beginPath();
+    c.moveTo(X(bx - 0.45*L*s.n.x), Y(by - 0.45*L*s.n.y));
+    c.lineTo(X(bx + L*s.n.x),      Y(by + L*s.n.y));
+    c.stroke(); c.restore();
+    arrow(c, X(bx), Y(by), X(bx + 0.42*L*s.n.x), Y(by + 0.42*L*s.n.y), css('--nrm'), 6, 2);
+    label(c, 'n', X(bx + 0.5*L*s.n.x)+4, Y(by + 0.5*L*s.n.y), css('--nrm'), 13);
+
+    // T talppont: A merőleges vetülete az n egyenesre
+    const sPar = (0 - bx)*s.n.x + (0 - by)*s.n.y;
+    const T = {x: bx + sPar*s.n.x, y: by + sPar*s.n.y};
+    c.save(); c.setLineDash([3,3]); c.strokeStyle = muted; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(T.x), Y(T.y)); c.stroke(); c.restore();
+    c.fillStyle = css('--nrm');
+    c.beginPath(); c.arc(X(T.x), Y(T.y), 4, 0, 7); c.fill();
+    label(c, 'T', X(T.x)-12, Y(T.y)+6, css('--nrm'), 13);
+    label(c, 'l', X(T.x/2)-10, Y(T.y/2)-8, muted, 13);
+  }
+
+  // A távozó golyó nem állítja le a rúd rezgését.
+  const rb = 9;
+  if (st.ball.x >= xmin && st.ball.x <= xmax && st.ball.y >= ymin && st.ball.y <= ymax){
+  c.fillStyle = css('--ball');
+  c.beginPath(); c.arc(X(st.ball.x), Y(st.ball.y), rb, 0, 7); c.fill();
+  label(c, 'm₁', X(st.ball.x)-rb-24, Y(st.ball.y)-4, ink, 13);
+
+  // sebességvektor a golyón
+  const vs = 0.17 / Math.max(0.2, s.c1);
+  if (st.phase === 0){
+    arrow(c, X(st.ball.x), Y(st.ball.y), X(st.ball.x), Y(st.ball.y - vs*st.vfall), css('--accent'), 6, 2);
+    label(c, 'c₁', X(st.ball.x)+8, Y(st.ball.y - 0.5*vs*st.vfall), css('--accent'), 13);
+  } else if (st.phase === 2){
+    arrow(c, X(st.ball.x), Y(st.ball.y),
+             X(st.ball.x + vs*st.bv.x), Y(st.ball.y + vs*st.bv.y), css('--accent'), 6, 2);
+  }
+
+  }
+
+  // léptékvonal (fix lépték mellett ez adja a viszonyítást)
+  {
+    const y0 = Y(ymin) - 14, x0 = X(xmin) + 18, x1 = x0 + 0.5*k;
+    c.strokeStyle = muted; c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y0); c.stroke();
+    c.lineWidth = 1;
+    for (const xx of [x0, x1]){ c.beginPath(); c.moveTo(xx, y0-4); c.lineTo(xx, y0+4); c.stroke(); }
+    c.fillStyle = muted; c.font = '12.5px -apple-system, system-ui, sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'bottom';
+    c.fillText('0,5 m', (x0+x1)/2, y0-5);
+  }
+
+  // méretadatok, amelyek a-val változnak
+  {
+    c.fillStyle = muted; c.font = '13px -apple-system, system-ui, sans-serif';
+    c.textAlign = 'left'; c.textBaseline = 'top';
+    c.fillText(`rúd hossza    3a = ${fmt(3*p.a, 2)} m`, 10, 8);
+    c.fillText(`talppont      l  = ${fmt(s.l, 3)} m`,   10, 26);
+    c.fillText(`ejtési magasság  h = ${fmt(s.hMag, 3)} m`, 10, 44);
+    c.fillText(`g = ${fmt(P.g, 2)} m/s²`, 10, 62);
+  }
+
+  // nehézségi gyorsulás
+  {
+    const gx = X(xmax) - 34, gy = Y(ymax) + 16;
+    arrow(c, gx, gy, gx, gy + 30, '#dc2626', 7, 2);
+    label(c, 'g', gx + 9, gy + 16, '#dc2626', 13);
+  }
+
+  // ejtési magasság méretvonala (ütközés előtt)
+  if (st.phase === 0){
+    const xh = X(-p.a) - 26;
+    c.strokeStyle = muted; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(xh, Y(0)); c.lineTo(xh, Y(s.yTop)); c.stroke();
+    for (const yy of [Y(0), Y(s.yTop)]){
+      c.beginPath(); c.moveTo(xh-4, yy); c.lineTo(xh+4, yy); c.stroke();
+    }
+    // ha a magasság nem fért a képre, törésjel a vonal tetején
+    if (s.csonkolt){
+      const yb = Y(s.yTop) + 12;
+      c.beginPath(); c.moveTo(xh-5, yb+3); c.lineTo(xh+5, yb-3); c.stroke();
+      c.beginPath(); c.moveTo(xh-5, yb+8); c.lineTo(xh+5, yb+2); c.stroke();
+    }
+    label(c, 'h', xh - 11, (Y(0)+Y(s.yTop))/2, muted, 13);
+  }
+
+  // ütközés villanása
+  if (st.flash > 0){
+    c.strokeStyle = css('--accent2'); c.lineWidth = 2.5; c.globalAlpha = st.flash;
+    c.beginPath(); c.arc(X(-p.a), Y(0), rb + 10 + 26*(1-st.flash), 0, 7); c.stroke();
+    c.globalAlpha = 1;
+  }
+}
+
+/* ---------- rajzolás: egyszerűsített Maxwell-ábra ---------- */
+function drawMaxwell(p, s){
+  const {c, w, h} = setup($('maxwell'));
+  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
+  const b = p.beta * Math.PI / 180;
+
+  // Az ábrát abban az állásban rajzoljuk, ahogyan az ütközési normális áll:
+  // ê_n a képernyőn jobbra-lefelé mutat (ez az n irány), ê_p erre merőleges.
+  const en = { x:  Math.sin(b), y: Math.cos(b) };
+  const ep = { x: -Math.cos(b), y: Math.sin(b) };
+
+  // közös (v, d) rendszer: v a normális irányú sebesség, d a segédegyenes eltolása
+  const vals = [0, s.c1n, s.c2Tn, s.cSn, s.v1n, s.v2Tn];
+  const vlo = Math.min(...vals), vhi = Math.max(...vals);
+  const vsp = Math.max(0.12, vhi - vlo);
+  const va  = vlo - 0.16*vsp, vb = vhi + 0.16*vsp;
+  const big = Math.max(p.m1, s.m2T);
+  const dsp = 0.70*vsp;
+  const d1  =  dsp * (s.m2T/big);   // az m₁ sebességeinek egyenese
+  const d2  = -dsp * (p.m1 /big);   // a redukált tömeg egyenese
+
+  // illesztés a vászonra: a ferde állás miatt a befoglaló méretet számoljuk
+  const raw = (v,d) => [v*en.x + d*ep.x, v*en.y + d*ep.y];
+  const box = [[va,0],[vb,0],[va,d1],[vb,d1],[va,d2],[vb,d2]].map(q => raw(q[0],q[1]));
+  const xs = box.map(q=>q[0]), ys = box.map(q=>q[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const k  = Math.min((w-62)/Math.max(1e-6, x1-x0), (h-44)/Math.max(1e-6, y1-y0));
+  const cx = w/2 - k*(x0+x1)/2, cy = h/2 - k*(y0+y1)/2;
+  const P  = (v,d) => { const r = raw(v,d); return [cx + k*r[0], cy + k*r[1]]; };
+
+  const seg = (A,B,col,lw,dash) => {
+    c.save(); if (dash) c.setLineDash(dash);
+    c.strokeStyle = col; c.lineWidth = lw;
+    c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); c.restore();
+  };
+  const dot = (Q,col,r=3.5) => { c.fillStyle = col; c.beginPath(); c.arc(Q[0],Q[1],r,0,7); c.fill(); };
+  const nyil = (A,B,col,lw) => { if (Math.hypot(B[0]-A[0], B[1]-A[1]) > 3) arrow(c, A[0],A[1], B[0],B[1], col, 6, lw); };
+  // Felirat alsó indexszel: a "_{...}" részt kisebb, lejjebb tolt betűkkel írjuk,
+  // mert a nagy T-nek nincs Unicode alsó indexe.
+  const rich = (str, Q, dn, dp, col, size=13) => {
+    const parts = []; const re = /_\{([^}]*)\}/g;
+    let last = 0, m;
+    while ((m = re.exec(str))){
+      if (m.index > last) parts.push([str.slice(last, m.index), false]);
+      parts.push([m[1], true]); last = re.lastIndex;
+    }
+    if (last < str.length) parts.push([str.slice(last), false]);
+
+    const fB = `italic ${size}px Georgia, serif`, fS = `italic ${size*0.72}px Georgia, serif`;
+    let tot = 0;
+    for (const [t, sub] of parts){ c.font = sub ? fS : fB; tot += c.measureText(t).width; }
+
+    let x = Q[0] + dn*en.x + dp*ep.x - tot/2;
+    const y = Q[1] + dn*en.y + dp*ep.y;
+    c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'middle';
+    for (const [t, sub] of parts){
+      c.font = sub ? fS : fB;
+      c.fillText(t, x, y + (sub ? size*0.26 : 0));
+      x += c.measureText(t).width;
+    }
+  };
+  // szakaszfelirat a felezőpontnál, az egyenestől kifelé tolva
+  const szakasz = (t,A,B,dp,col) => {
+    if (Math.hypot(B[0]-A[0], B[1]-A[1]) < 26) return;
+    const M = [(A[0]+B[0])/2, (A[1]+B[1])/2];
+    rich(t, M, 0, dp, col, 11.5);
+  };
+
+  const O1 = P(0,d1),     M1 = P(s.c1n,d1);
+  const O2 = P(0,d2),     M2 = P(s.c2Tn,d2);
+  const S  = P(s.cSn,0),  O  = P(0,0);
+  const P1 = P(s.cSn,d1), P2 = P(s.cSn,d2);
+  const Q1 = P(s.v1n,d1), Q2 = P(s.v2Tn,d2);
+
+  // n tengely és a két segédegyenes
+  arrow(c, ...P(va,0), ...P(vb,0), muted, 6, 1.4);
+  rich('n', P(vb,0), 14, 0, muted, 13);
+  seg(P(va,d1), P(vb,d1), line, 1, [4,4]);
+  seg(P(va,d2), P(vb,d2), line, 1, [4,4]);
+
+  // az O₁ és O₂T pontokat összekötő egyenes: a nulla sebesség vonala,
+  // amely az n tengelyt éppen az O origóban metszi
+  seg(P(0, d1*1.18), P(0, d2*1.18), line, 1.2);
+
+  // szerkesztővonalak: M₁M₂T és Q₁Q₂T is az S ponton megy át
+  seg(M1, M2, line, 1.2);
+  seg(Q1, Q2, line, 1, [3,3]);
+  seg(P1, P2, line, 1, [3,3]);
+
+  // sebességvektorok
+  nyil(O1, M1, css('--accent'), 2);
+  nyil(O2, M2, css('--accent'), 2);
+  nyil(O1, Q1, css('--ok'), 2.4);
+  nyil(O2, Q2, css('--ok'), 2.4);
+  nyil(O,  S,  css('--accent2'), 2);
+
+  dot(M1, ink); dot(M2, ink); dot(S, css('--accent2'), 4);
+  dot(O,  muted, 2.5);
+  dot(O1, css('--ok'), 3); dot(O2, css('--ok'), 3);
+  dot(P1, muted, 2.5); dot(P2, muted, 2.5);
+  dot(Q1, css('--ok')); dot(Q2, css('--ok'));
+
+  // a két ütközési szakasz: Δ (benyomódás) és eΔ (visszaalakulás)
+  szakasz('Δ_{1}',   M1, P1,  25, muted);
+  szakasz('eΔ_{1}',  P1, Q1,  25, muted);
+  szakasz('Δ_{2T}',  M2, P2, -20, muted);
+  szakasz('eΔ_{2T}', P2, Q2, -20, muted);
+
+  rich('O_{1}', O1, -24,   9, muted, 13);
+  rich('M_{1}', M1,  17,  11, ink,   13);
+  rich('Q_{1}', Q1, -17, -10, css('--ok'), 13);
+  rich('P_{1}', P1,   0, -12, muted, 12);
+  rich('S',     S,   10, -15, css('--accent2'), 13);
+  rich('O',     O,  -11,   0, muted, 12);
+
+  // ha a rúd áll, O₂T és M₂T egybeesik — közös felirattal
+  if (Math.hypot(M2[0]-O2[0], M2[1]-O2[1]) < 6){
+    rich('O_{2T}=M_{2T}', O2, -34, -11, ink, 13);
+  } else {
+    rich('O_{2T}', O2, -20, -11, muted, 13);
+    rich('M_{2T}', M2,  20, -11, ink,   13);
+  }
+  rich('Q_{2T}', Q2,  21,  11, css('--ok'), 13);
+  rich('P_{2T}', P2,  -3,  14, muted, 12);
+}
+
+/* ---------- animációs állapot ---------- */
+let raf = null, running = false, t = 0, last = 0, P = null, S = null;
+
+let motion = {tau:0,theta:0,omega:0};
+function angularAcceleration(p,s,theta){
+  // 1-cos(theta) helyett a numerikusan stabil ekvivalens alak.
+  return (2*s.M0*Math.sin(theta/2)**2 - p.kt*theta)/s.ThA;
+}
+function rk4Step(p,s,theta,omega,h){
+  const a1=angularAcceleration(p,s,theta), v1=omega;
+  const v2=omega+h*a1/2, a2=angularAcceleration(p,s,theta+h*v1/2);
+  const v3=omega+h*a2/2, a3=angularAcceleration(p,s,theta+h*v2/2);
+  const v4=omega+h*a3, a4=angularAcceleration(p,s,theta+h*v3);
+  return {theta:theta+h*(v1+2*v2+2*v3+v4)/6,
+          omega:omega+h*(a1+2*a2+2*a3+a4)/6};
+}
+function advanceOscillator(tau){
+  if(tau < motion.tau) motion={tau:0,theta:0,omega:S.om2};
+  const remaining=tau-motion.tau;
+  if(remaining<=0) return;
+  const maxStep=Math.min(1/240,0.04/Math.sqrt((P.kt+S.M0)/S.ThA));
+  const count=Math.ceil(remaining/maxStep),h=remaining/count;
+  for(let i=0;i<count;i++){
+    const next=rk4Step(P,S,motion.theta,motion.omega,h);
+    motion.theta=next.theta;motion.omega=next.omega;
+  }
+  motion.tau=tau;
+}
+
+function state(){
+  const p = P, s = S;
+  if (t < s.tErk){                    // 1. szakasz: szabadesés
+    const y = s.yTop - s.v0*t - 0.5*p.g*t*t;
+    const v = s.v0 + p.g*t;
+    return {phase:0, theta:0, ball:{x:-p.a, y}, vfall:v, bv:{x:0,y:-v}, flash:0};
+  }
+  const tau = t - s.tErk;             // ütközés utáni idő
+  // A golyó ferde hajítást végez; a rudat a rugó és a gravitáció mozgatja.
+  advanceOscillator(tau);
+  const th = motion.theta;
+  const bx = -p.a + s.v1.x*tau;
+  const by =        s.v1.y*tau - 0.5*p.g*tau*tau;
+  const flash = tau < 0.12 ? 1 - tau/0.12 : 0;
+  return {phase: tau < 0.02 ? 1 : 2, theta: th, ball:{x:bx, y:by},
+          vfall:0, bv:{x:s.v1.x, y:s.v1.y - P.g*tau}, flash};
+}
+
+function phaseText(st){
+  if (st.phase === 0) return `Szabadesés — v = ${fmt(st.vfall,2)} m/s`;
+  if (st.phase === 1) return 'ÜTKÖZÉS';
+  return 'Rezgés';
+}
+
+function frame(now){
+  if (!last) last = now;
+  const dt = Math.min(0.05, (now - last)/1000);
+  last = now;
+  if (running) t += dt / parseFloat($('slow').value);
+
+  if (!P || !S) { raf = requestAnimationFrame(frame); return; }
+  const st = state();
+  drawScene(P, S, st);
+  $('phase').textContent = phaseText(st);
+
+  // A rugóval kapcsolt rúd csillapítatlanul tovább rezeg.
+  raf = requestAnimationFrame(frame);
+}
+
+/* ---------- vezérlés ---------- */
+function updateButtons(){
+  $('pause').textContent = running || t===0 ? 'Szünet' : 'Folytatás';
+  $('run').disabled = $('pause').disabled = !S;
+}
+function recompute(){
+  const p = readParams();
+  let msg = validate(p);
+  let result = null;
+  if (!msg){
+    result = solve(p);
+    const scale = Math.sqrt((p.kt + result.M0)/result.ThA);
+    if (![result.om2,result.M0,result.preload,result.m2T,scale].every(Number.isFinite)
+        || scale > 20000 || Math.abs(result.om2) > 20000)
+      msg = 'A megadott értékek túl szélsőségesek az animációhoz.';
+  }
+  $('warn').textContent = msg;
+  if (msg){
+    running = false; P = null; S = null;
+    $('out').innerHTML = '';
+    setup($('scene')); setup($('maxwell'));
+    $('phase').textContent = '—';
+    updateButtons(); return false;
+  }
+  P = p; S = result;
+  motion = {tau:0,theta:0,omega:S.om2};
+  showResults(P, S); drawMaxwell(P, S);
+  const st = state(); drawScene(P, S, st);
+  $('phase').textContent = phaseText(st);
+  updateButtons();
+  return true;
+}
+function restart(){
+  t=0; last=0;
+  if(recompute()) running=true;
+  updateButtons();
+}
+$('run').onclick = restart;
+$('reset').onclick = () => {
+  running=false;t=0;last=0;recompute();updateButtons();
+};
+$('pause').onclick = () => {
+  if(!S) return;
+  running=!running;last=0;updateButtons();
+};
+$('slow').oninput  = () => $('slowTxt').textContent = $('slow').value + '×';
+
+window.addEventListener('resize', () => { if (P) { drawMaxwell(P,S); drawScene(P,S,state()); } });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (P) { drawMaxwell(P,S); drawScene(P,S,state()); }
+});
+
+buildControls();
+recompute();
+raf = requestAnimationFrame(frame);
+</script>
+</body>
+</html>

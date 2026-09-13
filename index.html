@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rezgéstan gyakorlatok</title>
+<style>
+  :root{
+    --bg:#f5f5f2; --card:#fff; --ink:#1c1c1a; --muted:#6b6b66;
+    --line:#dedbd4; --accent:#8a4b2a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#16161a; --card:#1e1e24; --ink:#eceae4; --muted:#a3a099;
+           --line:#33333c; --accent:#e0a072; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:48px 20px 80px}
+  h1{font-size:1.9rem;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0 0 32px}
+  details{background:var(--card);border:1px solid var(--line);border-radius:12px;
+          margin-bottom:14px;overflow:hidden}
+  summary{cursor:pointer;padding:16px 20px;font-weight:600;list-style:none;
+          display:flex;align-items:baseline;gap:12px}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"\25B8";color:var(--accent);transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  .num{color:var(--accent);font-variant-numeric:tabular-nums}
+  .body{padding:0 20px 18px 20px;border-top:1px solid var(--line);margin-top:2px}
+  ul{list-style:none;padding:0;margin:14px 0 0}
+  li{margin:0 0 8px}
+  a.item{display:flex;gap:10px;align-items:center;text-decoration:none;color:var(--ink);
+     padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:transparent}
+  a.item:hover{border-color:var(--accent);color:var(--accent)}
+  .ico{width:22px;text-align:center}
+  .lbl small{display:block;color:var(--muted);font-weight:400;font-size:.8rem}
+  .lbl{font-weight:600}
+  footer{margin-top:36px;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Rezgéstan &mdash; gyakorlatok</h1>
+<p class="sub">Kattints egy gyakorlat címére az anyagok megnyitásához.</p>
+
+<details open>
+ <summary><span class="num">1.</span><span>Ütközések</span></summary>
+ <div class="body"><ul>
+  <li><a class="item" href="gyakorlat_1/animacio/utkozes_animacio.html"><span class="ico">&#9654;</span><span class="lbl">Animáció<small>interaktív HTML &middot; van benne Vissza gomb</small></span></a></li>
+  <li><a class="item" href="gyakorlat_1/rovid_kidolgozas/rovid_kidolgozas_gyakorlat_1.pdf"><span class="ico">&#128196;</span><span class="lbl">Rövid kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small></span></a></li>
+  <li><a class="item" href="gyakorlat_1/reszletes_kidolgozas/reszletes_kidolgozas_gyakorlat_1.pdf"><span class="ico">&#128216;</span><span class="lbl">Részletes kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small></span></a></li>
+ </ul></div>
+</details>
+
+<details>
+ <summary><span class="num">2.</span><span>Egy szabadsági fokú, csillapítatlan lengőrendszer</span></summary>
+ <div class="body"><ul>
+  <li><a class="item" href="gyakorlat_2/animacio/rezges_animacio.html"><span class="ico">&#9654;</span><span class="lbl">Animáció<small>interaktív HTML &middot; van benne Vissza gomb</small></span></a></li>
+  <li><a class="item" href="gyakorlat_2/rovid_kidolgozas/rovid_kidolgozas_gyakorlat_2.pdf"><span class="ico">&#128196;</span><span class="lbl">Rövid kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small></span></a></li>
+  <li><a class="item" href="gyakorlat_2/reszletes_kidolgozas/reszletes_kidolgozas_gyakorlat_2.pdf"><span class="ico">&#128216;</span><span class="lbl">Részletes kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small></span></a></li>
+ </ul></div>
+</details>
+
+<footer>Minden anyag ugyanebben az ablakban nyílik meg. Az animációk tetején van egy
+Vissza gomb; PDF-nél a böngésző Vissza gombja (vagy &#8984;+&#8592;) hoz vissza ide.</footer>
+</div>
+</body>
+</html>
