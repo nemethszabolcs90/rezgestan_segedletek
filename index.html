@@ -30,13 +30,13 @@
   .body{padding:0 20px 18px 20px;border-top:1px solid var(--line);margin-top:2px}
   ul{list-style:none;padding:0;margin:14px 0 0}
   li{margin:0 0 8px}
-  a.item{display:flex;gap:10px;align-items:center;text-decoration:none;color:var(--ink);
+  .item{display:flex;gap:10px;align-items:center;text-decoration:none;color:var(--ink);
      padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:transparent}
   a.item:hover{border-color:var(--accent);color:var(--accent)}
   .ico{width:22px;text-align:center}
   .lbl small{display:block;color:var(--muted);font-weight:400;font-size:.8rem}
   .lbl{font-weight:600}
-  .soon{display:block;margin:10px 12px 0;color:#d62828;font-weight:700}
+  .lbl small.soon{display:block;margin-top:3px;color:#e53935;font-weight:700}
   footer{margin-top:36px;color:var(--muted);font-size:.85rem}
 </style>
 </head>
@@ -50,7 +50,7 @@
  <div class="body"><ul>
   <li><a class="item" href="gyakorlat_1/animacio/utkozes_animacio.html"><span class="ico">&#9654;</span><span class="lbl">Animáció<small>interaktív HTML &middot; van benne Vissza gomb</small></span></a></li>
   <li><a class="item" href="gyakorlat_1/rovid_kidolgozas/rovid_kidolgozas_gyakorlat_1.pdf"><span class="ico">&#128196;</span><span class="lbl">Rövid kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small></span></a></li>
-  <li><span class="soon">Részletes kidolgozás — hamarosan elérhető</span></li>
+  <li><span class="item" aria-disabled="true"><span class="ico">&#128216;</span><span class="lbl">Részletes kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small><small class="soon">Hamarosan elérhető</small></span></span></li>
  </ul></div>
 </details>
 
@@ -59,7 +59,7 @@
  <div class="body"><ul>
   <li><a class="item" href="gyakorlat_2/animacio/rezges_animacio.html"><span class="ico">&#9654;</span><span class="lbl">Animáció<small>interaktív HTML &middot; van benne Vissza gomb</small></span></a></li>
   <li><a class="item" href="gyakorlat_2/rovid_kidolgozas/rovid_kidolgozas_gyakorlat_2.pdf"><span class="ico">&#128196;</span><span class="lbl">Rövid kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small></span></a></li>
-  <li><span class="soon">Részletes kidolgozás — hamarosan elérhető</span></li>
+  <li><span class="item" aria-disabled="true"><span class="ico">&#128216;</span><span class="lbl">Részletes kidolgozás<small>PDF &middot; a böngésző Vissza gombjával jössz vissza</small><small class="soon">Hamarosan elérhető</small></span></span></li>
  </ul></div>
 </details>
 
