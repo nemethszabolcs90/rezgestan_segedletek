@@ -42,7 +42,7 @@
   canvas{width:100%;display:block;border-radius:8px;touch-action:none}
   #scene{height:400px}
   #maxwell{height:340px}
-  @media (max-width:860px){#scene{height:320px}}
+  @media (max-width:860px){#scene{height:auto}}
   .phase{font-size:14.5px;color:var(--muted);margin:8px 2px 0;min-height:20px}
   table{width:100%;border-collapse:collapse;font-size:14.5px}
   td{padding:4px 0;vertical-align:baseline}
@@ -275,8 +275,7 @@ function label(c, txt, x, y, col, size=13, align='left'){
 
 /* ---------- rajzolás: animáció ---------- */
 function drawScene(p, s, st){
-  const {c, w, h} = setup($('scene'));
-  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
+  const cv = $('scene');
 
   // világ → képernyő (A = origó). A lépték FIX, nem igazodik a-hoz — így a rúd
   // hossza (3a) a csúszka húzásakor láthatóan változik. A keret csak akkor tágul,
@@ -286,6 +285,18 @@ function drawScene(p, s, st){
   const xmax = Math.max(1.15,2*p.a+0.15);
   const extentY = Math.max(0.65,2*p.a*Math.sin(s.swingBound)+0.15);
   const ymin = -extentY, ymax = extentY;
+
+  // Mobil nézetben a vászon képarányát a jelenet tényleges befoglaló téglalapjához
+  // igazítjuk (nem marad kényszerűen négyzet), hogy a rajz szinte az egész vásznat
+  // kitöltse, üres margó nélkül — a geometria maga (a rajzolás logikája) változatlan.
+  if (matchMedia('(max-width:860px)').matches){
+    cv.style.aspectRatio = (xmax-xmin) + ' / ' + (ymax-ymin);
+  } else {
+    cv.style.aspectRatio = '';
+  }
+
+  const {c, w, h} = setup(cv);
+  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
   const k = Math.min(w/(xmax-xmin), h/(ymax-ymin)) * 0.96;
   const ox = w/2 - k*(xmin+xmax)/2, oy = h/2 + k*(ymin+ymax)/2;
   const X = x => ox + k*x, Y = y => oy - k*y;
