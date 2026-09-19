@@ -42,7 +42,10 @@
   canvas{width:100%;display:block;border-radius:8px;touch-action:none}
   #scene{height:400px}
   #maxwell{height:340px}
-  @media (max-width:860px){#scene{height:auto}}
+  @media (max-width:860px){#scene{height:320px}}
+  @media (max-width:600px){
+    #scene,#maxwell{height:auto;aspect-ratio:1/1}
+  }
   .phase{font-size:14.5px;color:var(--muted);margin:8px 2px 0;min-height:20px}
   table{width:100%;border-collapse:collapse;font-size:14.5px}
   td{padding:4px 0;vertical-align:baseline}
@@ -249,12 +252,20 @@ function showResults(p, s){
 /* ---------- rajzolás: közös ---------- */
 function setup(cv){
   const dpr = window.devicePixelRatio || 1;
-  const w = cv.clientWidth, h = cv.clientHeight;
-  cv.width = w*dpr; cv.height = h*dpr;
+  const cw = cv.clientWidth, ch = cv.clientHeight;
+  cv.width = cw*dpr; cv.height = ch*dpr;
   const c = cv.getContext('2d');
   c.setTransform(dpr,0,0,dpr,0,0);
-  c.clearRect(0,0,w,h);
-  return {c, w, h};
+  c.clearRect(0,0,cw,ch);
+  if (window.matchMedia('(max-width:600px)').matches){
+    const w = cv.id === 'scene' ? 800 : 480;
+    const h = cv.id === 'scene' ? 400 : 340;
+    const scale = Math.min(cw/w, ch/h);
+    const ox = (cw-w*scale)/2, oy = (ch-h*scale)/2;
+    c.setTransform(dpr*scale,0,0,dpr*scale,dpr*ox,dpr*oy);
+    return {c, w, h};
+  }
+  return {c, w:cw, h:ch};
 }
 const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
 
@@ -275,7 +286,8 @@ function label(c, txt, x, y, col, size=13, align='left'){
 
 /* ---------- rajzolás: animáció ---------- */
 function drawScene(p, s, st){
-  const cv = $('scene');
+  const {c, w, h} = setup($('scene'));
+  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
 
   // világ → képernyő (A = origó). A lépték FIX, nem igazodik a-hoz — így a rúd
   // hossza (3a) a csúszka húzásakor láthatóan változik. A keret csak akkor tágul,
@@ -285,18 +297,6 @@ function drawScene(p, s, st){
   const xmax = Math.max(1.15,2*p.a+0.15);
   const extentY = Math.max(0.65,2*p.a*Math.sin(s.swingBound)+0.15);
   const ymin = -extentY, ymax = extentY;
-
-  // Mobil nézetben a vászon képarányát a jelenet tényleges befoglaló téglalapjához
-  // igazítjuk (nem marad kényszerűen négyzet), hogy a rajz szinte az egész vásznat
-  // kitöltse, üres margó nélkül — a geometria maga (a rajzolás logikája) változatlan.
-  if (matchMedia('(max-width:860px)').matches){
-    cv.style.aspectRatio = (xmax-xmin) + ' / ' + (ymax-ymin);
-  } else {
-    cv.style.aspectRatio = '';
-  }
-
-  const {c, w, h} = setup(cv);
-  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
   const k = Math.min(w/(xmax-xmin), h/(ymax-ymin)) * 0.96;
   const ox = w/2 - k*(xmin+xmax)/2, oy = h/2 + k*(ymin+ymax)/2;
   const X = x => ox + k*x, Y = y => oy - k*y;
