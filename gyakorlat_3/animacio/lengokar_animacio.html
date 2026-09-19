@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rezgéstan 3. gyakorlat — 1 DoF lengőkar</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --panel:#fff; --ink:#1a1a1a; --muted:#6b6b6b;
+    --line:#d8d8d4; --accent:#1d4ed8; --accent2:#b45309; --ok:#15803d;
+    --rod:#3f3f46; --ball:#0f766e; --nrm:#7c3aed; --mass:#eef0c8; --bad:#b91c1c;
+    --vel:#2563eb; --acc:#dc2626;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17181a; --panel:#202124; --ink:#ececed; --muted:#a1a1aa;
+      --line:#3a3b3f; --accent:#7ea2ff; --accent2:#f0b429; --ok:#5ec27a;
+      --rod:#c9c9cf; --ball:#5eead4; --nrm:#c4a7ff; --mass:#3b3d29; --bad:#f87171;
+      --vel:#60a5fa; --acc:#f87171;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15.5px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+  h1{font-size:22px;margin:0 0 2px}
+  .sub{color:var(--muted);margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;
+           color:var(--muted);margin:0 0 10px;font-weight:600}
+  label{display:grid;grid-template-columns:104px minmax(0,1fr) 74px;gap:10px;align-items:center;margin-bottom:11px}
+  label span{font-size:15px;white-space:nowrap}
+  input[type=range]{min-width:0;width:100%;accent-color:var(--accent);margin:0}
+  input[type=number]{width:100%;padding:6px 7px;border:1px solid var(--line);border-radius:6px;
+    background:var(--bg);color:var(--ink);font:14.5px ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right}
+  input[type=number]::-webkit-inner-spin-button{display:none}
+  .btns{display:flex;gap:8px;margin-top:12px}
+  button{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:7px;
+    background:var(--bg);color:var(--ink);font-size:14.5px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  canvas{width:100%;display:block;border-radius:8px;touch-action:none}
+  #scene{height:420px}
+  #foron{height:330px}
+  @media (max-width:860px){#scene{height:340px}}
+  @media (max-width:600px){#scene,#foron{height:auto;aspect-ratio:1/1}}
+  .phase{font-size:14.5px;color:var(--muted);margin:8px 2px 0;min-height:20px}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  td{padding:4px 0;vertical-align:baseline}
+  td.v{text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
+  td.k{color:var(--muted);padding-right:10px}
+  .sec{font-weight:600;padding-top:9px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:860px){.two{grid-template-columns:1fr}}
+  .warn{color:var(--accent2);font-size:13.5px;margin-top:8px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .vissza-gomb{display:inline-block;margin:14px 0 0 16px;padding:7px 14px;
+    border:1px solid var(--line);border-radius:8px;text-decoration:none;
+    color:var(--accent);background:var(--panel);font-weight:600;font-size:14px}
+  .vissza-gomb:hover{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<a href="../../index.html" class="vissza-gomb">&#9664; Vissza a gyakorlatokhoz</a>
+<div class="wrap">
+
+<h1>Egy szabadsági fokú lengőkar szabad rezgése</h1>
+<p class="sub">Rezgéstan, 3. gyakorlat — interaktív animáció és foronómiai görbék</p>
+
+<div class="grid">
+
+  <!-- ============ VEZÉRLŐ ============ -->
+  <div>
+    <div class="card">
+      <h2>Paraméterek</h2>
+      <div id="params"></div>
+
+      <div style="margin-top:12px">
+        <span style="font-size:13px">Lassítás: <b id="slowTxt">8×</b></span>
+        <input type="range" id="slow" min="1" max="60" value="8">
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="run">Indítás</button>
+        <button id="pause">Szünet</button>
+        <button id="reset">Újra</button>
+      </div>
+      <div id="warn" class="warn"></div>
+    </div>
+  </div>
+
+  <!-- ============ ÁBRÁK + EREDMÉNY ============ -->
+  <div>
+    <div class="card">
+      <h2>Animáció</h2>
+      <canvas id="scene" height="420"></canvas>
+      <div class="phase" id="phase">Nyomd meg az „Indítás” gombot.</div>
+      <div class="phase">Szögnagyítás: <b id="nagyTxt">1×</b> · amplitúdó: <b id="ampTxt">—</b></div>
+    </div>
+
+    <div class="two" style="margin-top:16px">
+      <div class="card">
+        <h2>Foronómiai görbék</h2>
+        <canvas id="foron" height="330"></canvas>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Számított értékek</h2>
+      <table id="out"></table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- segédek ---------- */
+const $ = id => document.getElementById(id);
+const fmt = (x, d=3) => (Math.abs(x) < 5e-12 ? 0 : x).toFixed(d).replace('.', ',');
+const fmtE = (x, d=3) => {
+  if (x === 0) return '0';
+  const ex = Math.floor(Math.log10(Math.abs(x)));
+  const ma = x / Math.pow(10, ex);
+  return fmt(ma, d) + '·10' + sup(ex);
+};
+const sup = n => String(n).replace('-', '⁻').replace(/[0-9]/g,
+  d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+d]);
+
+/* ---------- fizika ---------- */
+const G = 9.81;
+function solve(p){
+  // 1) a redukált modell két állandója
+  const Th = p.m1*p.l*p.l + (p.m2 + p.m3)*p.h*p.h;   // Θ_a = Σ m_i r_i²
+  const Mg = (p.m3 - p.m2)*G*p.h;                    // a nehézségi erő merevségjáruléka
+  const Mk = p.k*p.a*p.a;                            // a rugó merevségjáruléka
+  const kt = Mg + Mk;                                // eredő torziós merevség
+  const wn = Math.sqrt(Math.abs(kt) / Th);
+  const fn = wn / (2*Math.PI);
+  const Tn = 2*Math.PI / wn;
+
+  // 2) az előfeszítés (a statikus rész)
+  const Mrst  = p.m1*G*p.l;                          // = M_r,st
+  const Frst  = Mrst / p.a;
+  const phist = Mrst / Mk;                           // statikus szögkitérés
+  const dstat = Frst / p.k;                          // a rugó statikus megnyúlása
+
+  // 3) kezdeti feltételek a B pont adataiból: y_B = -l·Ψ
+  const P0 = -p.yB0 / p.l;
+  const w0 = -p.vB0 / p.l;
+  const C1 = P0, C2 = w0 / wn;
+  const A  = Math.hypot(C1, C2);
+  const eps = Math.atan2(C1, C2);
+
+  // 4) szélsőértékek
+  const dPmax = A*wn, ddPmax = A*wn*wn;
+  const Frmax = Frst + p.k*p.a*A;
+  const Frmin = Frst - p.k*p.a*A;
+
+  return {Th,Mg,Mk,kt,wn,fn,Tn,Mrst,Frst,phist,dstat,
+          P0,w0,C1,C2,A,eps,dPmax,ddPmax,Frmax,Frmin,
+          stabil: kt > 0};
+}
+
+// mozgástörvények (t = 0 a mozgás kezdete)
+const Pof   = (s,t) => s.A * Math.sin(s.wn*t + s.eps);
+const dPof  = (s,t) => s.A * s.wn * Math.cos(s.wn*t + s.eps);
+const ddPof = (s,t) => -s.A * s.wn * s.wn * Math.sin(s.wn*t + s.eps);
+const Frof  = (p,s,t) => s.Frst + p.k*p.a*Pof(s,t);
+
+/* ---------- vezérlők (csúszka + számmező) ---------- */
+const PARAMS = [
+  {k:'m1',  cim:'m<sub>1</sub>', egys:'kg',   min:0.5,  max:5,     step:0.1,   val:2},
+  {k:'m2',  cim:'m<sub>2</sub>', egys:'kg',   min:1,    max:8,     step:0.1,   val:4},
+  {k:'m3',  cim:'m<sub>3</sub>', egys:'kg',   min:1,    max:8,     step:0.1,   val:3},
+  {k:'l',   cim:'l',             egys:'m',    min:0.5,  max:1.5,   step:0.05,  val:1},
+  {k:'h',   cim:'h',             egys:'m',    min:0.25, max:0.8,   step:0.05,  val:0.5},
+  {k:'a',   cim:'a',             egys:'m',    min:0.25, max:0.9,   step:0.05,  val:0.6},
+  {k:'k',   cim:'k',             egys:'N/m',  min:3000, max:20000, step:100,   val:10000},
+  {k:'yB0', cim:'y<sub>B0</sub>',egys:'m',    min:-0.05,max:0.05,  step:0.0025,val:-0.01},
+  {k:'vB0', cim:'v<sub>By0</sub>',egys:'m/s', min:-2,   max:2,     step:0.05,  val:-1},
+];
+const KEYS = PARAMS.map(q => q.k);
+
+function buildControls(){
+  $('params').innerHTML = PARAMS.map(q => `
+    <label title="${q.egys}">
+      <span>${q.cim} <small style="color:var(--muted)">[${q.egys}]</small></span>
+      <input type="range"  id="${q.k}_s" min="${q.min}" max="${q.max}" step="${q.step}" value="${q.val}">
+      <input type="number" id="${q.k}"   min="${q.min}" max="${q.max}" step="${q.step}" value="${q.val}">
+    </label>`).join('');
+
+  for (const q of PARAMS){
+    const num = $(q.k), rng = $(q.k + '_s');
+    // csúszka → számmező
+    rng.addEventListener('input', () => { num.value = rng.value; changed(); });
+    // számmező → csúszka (a csúszka tartományán kívüli érték is megengedett)
+    num.addEventListener('input', () => {
+      const v = parseFloat(num.value);
+      if (isFinite(v)) rng.value = Math.min(q.max, Math.max(q.min, v));
+      changed();
+    });
+  }
+}
+function changed(){ running = false; t = 0; last = 0; recompute(); }
+
+function readParams(){
+  const p = {};
+  for (const k of KEYS) p[k] = parseFloat($(k).value);
+  return p;
+}
+function validate(p){
+  for (const k in p) if (!isFinite(p[k])) return 'Hiányzó vagy hibás érték: ' + k;
+  if (p.m1 <= 0) return 'm₁ legyen pozitív.';
+  if (p.m2 < 0 || p.m3 < 0) return 'A tömegek ne legyenek negatívak.';
+  if (p.l <= 0 || p.h <= 0 || p.a <= 0) return 'l, h és a legyen pozitív.';
+  if (p.a > p.l) return 'a ne legyen nagyobb l-nél (a rugó a rúdon van).';
+  if (p.k <= 0) return 'k legyen pozitív.';
+  if (p.yB0 === 0 && p.vB0 === 0) return 'Nulla kezdeti feltétellel nincs mozgás.';
+  return '';
+}
+
+/* ---------- eredménytáblázat ---------- */
+function showResults(p, s){
+  const rows = [
+    ['sec','A redukált modell',''],
+    ['','Θ_a = m₁l² + (m₂+m₃)h²',       fmt(s.Th, 4) + ' kgm²'],
+    ['','(m₃−m₂)gh',                    fmt(s.Mg, 3) + ' Nm/rad'],
+    ['','ka²',                          fmt(s.Mk, 1) + ' Nm/rad'],
+    ['','k_t = (m₃−m₂)gh + ka²',        fmt(s.kt, 3) + ' Nm/rad'],
+    ['sec','A lengőrendszer',''],
+    ['','ω_n = √(k_t/Θ_a)',             fmt(s.wn, 4) + ' rad/s'],
+    ['','f_n = ω_n/2π',                 fmt(s.fn, 4) + ' Hz'],
+    ['','T_n = 2π/ω_n',                 fmt(s.Tn, 5) + ' s'],
+    ['sec','Az előfeszítés',''],
+    ['','M_r,st = m₁gl',                fmt(s.Mrst, 3) + ' Nm'],
+    ['','F_r,st = m₁gl/a',              fmt(s.Frst, 3) + ' N'],
+    ['','φ_st = M_r,st/(ka²)',          fmt(s.phist, 5) + ' rad'],
+    ['','a·φ_st  (rugónyúlás)',         fmt(s.dstat*1000, 3) + ' mm'],
+    ['sec','Kezdeti feltételek',''],
+    ['','Ψ₀ = −y_B0/l',                 fmt(s.P0, 4) + ' rad'],
+    ['','ω₀ = −v_By0/l',                fmt(s.w0, 4) + ' rad/s'],
+    ['','C₁ = Ψ₀',                      fmt(s.C1, 4) + ' rad'],
+    ['','C₂ = ω₀/ω_n',                  fmt(s.C2, 4) + ' rad'],
+    ['sec','A rezgés',''],
+    ['','A = √(C₁²+C₂²)',               fmt(s.A, 4) + ' rad'],
+    ['','ε = arctg(C₁/C₂)',             fmt(s.eps, 4) + ' rad'],
+    ['sec','A rugóerő',''],
+    ['','F_r,max = F_r,st + kaA',       fmt(s.Frmax, 2) + ' N'],
+  ];
+  $('out').innerHTML = rows.map(([cls,k,v]) =>
+    cls === 'sec' ? `<tr><td class="sec" colspan="2">${k}</td></tr>`
+                  : `<tr><td class="k">${k}</td><td class="v">${v}</td></tr>`).join('');
+}
+
+/* ---------- rajzolás: közös ---------- */
+function setup(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const cw = cv.clientWidth, ch = cv.clientHeight;
+  cv.width = cw*dpr; cv.height = ch*dpr;
+  const c = cv.getContext('2d');
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,cw,ch);
+  if (window.matchMedia('(max-width:600px)').matches){
+    const w = cv.id === 'scene' ? 800 : 480;
+    const h = cv.id === 'scene' ? 420 : 330;
+    const scale = Math.min(cw/w, ch/h);
+    const ox = (cw-w*scale)/2, oy = (ch-h*scale)/2;
+    c.setTransform(dpr*scale,0,0,dpr*scale,dpr*ox,dpr*oy);
+    return {c, w, h};
+  }
+  return {c, w:cw, h:ch};
+}
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+
+function arrow(c, x1,y1, x2,y2, col, head=7, lw=2){
+  c.strokeStyle = col; c.fillStyle = col; c.lineWidth = lw;
+  c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+  const ang = Math.atan2(y2-y1, x2-x1);
+  c.beginPath(); c.moveTo(x2,y2);
+  c.lineTo(x2-head*Math.cos(ang-0.4), y2-head*Math.sin(ang-0.4));
+  c.lineTo(x2-head*Math.cos(ang+0.4), y2-head*Math.sin(ang+0.4));
+  c.closePath(); c.fill();
+}
+function label(c, txt, x, y, col, size=12, align='left'){
+  c.fillStyle = col; c.font = `italic ${size}px Georgia, serif`;
+  c.textAlign = align; c.textBaseline = 'middle';
+  c.fillText(txt, x, y);
+}
+// rugó két pont között
+function spring(c, x1,y1, x2,y2, col, coils=7, amp=7){
+  const L = Math.hypot(x2-x1, y2-y1);
+  if (L < 4) return;
+  const ux = (x2-x1)/L, uy = (y2-y1)/L, nx = -uy, ny = ux;
+  const lead = Math.min(12, L*0.18);
+  c.strokeStyle = col; c.lineWidth = 1.8; c.beginPath();
+  c.moveTo(x1, y1);
+  c.lineTo(x1+ux*lead, y1+uy*lead);
+  const n = coils*2, span = L - 2*lead;
+  for (let i=1; i<=n; i++){
+    const d = lead + span*i/n, o = (i%2 ? -amp : amp);
+    c.lineTo(x1 + ux*d + nx*o, y1 + uy*d + ny*o);
+  }
+  c.lineTo(x1+ux*(L-lead), y1+uy*(L-lead));
+  c.lineTo(x2, y2); c.stroke();
+}
+// falszerű, sraffozott befogás — a ferde vonalak a keretre vannak vágva
+function hatch(c, x, y, w, h, col){
+  c.save();
+  c.beginPath(); c.rect(x, y, w, h); c.clip();
+  c.strokeStyle = col; c.lineWidth = 1;
+  for (let i = -h; i < w + h; i += 6){
+    c.beginPath(); c.moveTo(x+i, y+h); c.lineTo(x+i+h, y); c.stroke();
+  }
+  c.restore();
+  c.strokeStyle = col; c.lineWidth = 1;
+  c.strokeRect(x, y, w, h);
+}
+
+/* ---------- rajzolás: animáció ---------- */
+let NAGY = 1;                          // a szögkitérés nagyítása a rajzon
+
+function drawScene(p, s, st){
+  const {c, w, h} = setup($('scene'));
+  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
+
+  // világ → képernyő: az A csukló helye és a méretarány
+  const spr = 0.55*p.h;                                  // a rugó rajzolt hossza (m)
+  const worldW = p.l*1.35, worldH = 2*p.h + spr + 0.20*p.h;
+  const sc = Math.min((w - 70)/worldW, (h - 52)/worldH);
+  const xA = (w - sc*worldW)/2 + sc*0.08*p.l;            // vízszintesen középre
+  const yA = (h - sc*worldH)/2 + sc*(p.h + spr);
+  const X = (x,y) => xA + sc*x, Y = (x,y) => yA - sc*y;
+
+  // ---- nagyítás: az amplitúdó 13°-nak lássék ----
+  NAGY = Math.max(1, Math.min(400, (13*Math.PI/180) / Math.max(s.A, 1e-9)));
+  $('nagyTxt').textContent = fmt(NAGY, NAGY < 10 ? 1 : 0) + '×';
+  $('ampTxt').textContent  = fmt(s.A*180/Math.PI, 3) + '° (' + fmt(s.A, 4) + ' rad)';
+
+  const Ps = st.P * NAGY;                                // a rajzolt szögkitérés
+  const Pst = s.phist * NAGY;                            // a rajzolt statikus szögkitérés
+  const R = ang => [Math.cos(ang), -Math.sin(ang)];       // Ψ pozitív = lefelé forgat
+
+  // ---- segédvonalak ----
+  const RR = p.l*1.20;
+  c.save(); c.setLineDash([6,4]); c.strokeStyle = css('--ok'); c.lineWidth = 1.1;
+  c.beginPath(); c.moveTo(X(0,0), Y(0,0));
+  c.lineTo(X(RR,0), Y(RR,0)); c.stroke();                       // egyensúlyi helyzet
+  c.restore();
+  const [ux0,uy0] = R(-Pst);                                    // erőmentes helyzet
+  c.save(); c.setLineDash([2,3]); c.strokeStyle = muted; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(X(0,0), Y(0,0));
+  c.lineTo(X(RR*ux0, RR*uy0), Y(RR*ux0, RR*uy0)); c.stroke();
+  c.restore();
+
+  // jelmagyarázat
+  const leg = [[css('--ok'),[6,4],'egyensúlyi helyzet (Ψ = 0)'],
+               [muted,[2,3],'a rugó erőmentes helyzete (φ = 0)']];
+  c.font = '11.5px -apple-system,BlinkMacSystemFont,sans-serif';
+  c.textAlign = 'left'; c.textBaseline = 'middle';
+  leg.forEach(([col,dash,txt],i) => {
+    const yy = 16 + i*16;
+    c.save(); c.setLineDash(dash); c.strokeStyle = col; c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(12, yy); c.lineTo(38, yy); c.stroke(); c.restore();
+    c.fillStyle = muted; c.fillText(txt, 44, yy);
+  });
+
+  // ---- a rudak ----
+  const [cx,cy] = R(Ps);                    // a vízszintes rúd egységvektora
+  const px = -cy, py = cx;                  // ...és a rá merőleges (a függőleges rúd)
+  const Bx = p.l*cx,  By = p.l*cy;          // B = l·u,  u = (cosΨ, −sinΨ)
+  const Sx = p.a*cx,  Sy = p.a*cy;          // a rugó bekötési pontja
+  const T2x = p.h*px, T2y = p.h*py;         // m₂ (fölül)
+  const T3x = -p.h*px,T3y = -p.h*py;        // m₃ (alul)
+
+  c.strokeStyle = css('--rod'); c.lineWidth = 6; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(X(0,0), Y(0,0)); c.lineTo(X(Bx,By), Y(Bx,By)); c.stroke();
+  c.beginPath(); c.moveTo(X(T2x,T2y), Y(T2x,T2y)); c.lineTo(X(T3x,T3y), Y(T3x,T3y)); c.stroke();
+  c.lineCap = 'butt';
+
+  // ---- a rugó ----
+  const anchY = spr;                                     // a felfüggesztés magassága (m)
+  hatch(c, X(p.a,0)-26, Y(0,anchY)-13, 52, 13, muted);
+  spring(c, X(p.a,anchY), Y(p.a,anchY), X(Sx,Sy), Y(Sx,Sy),
+         st.Fr >= 0 ? css('--accent') : css('--bad'), 8, 8);
+  label(c, 'k', X(p.a,0)+13, (Y(0,anchY)+Y(Sx,Sy))/2, css('--accent'), 13);
+
+  // ---- tömegek ----
+  const ball = (x,y,txt,r,align) => {
+    const gx = X(x,y), gy = Y(x,y);
+    const g = c.createRadialGradient(gx-r*0.35, gy-r*0.35, 2, gx, gy, r);
+    g.addColorStop(0, css('--ball')); g.addColorStop(1, css('--rod'));
+    c.fillStyle = g; c.beginPath(); c.arc(gx, gy, r, 0, 7); c.fill();
+    c.strokeStyle = ink; c.lineWidth = 1.2; c.stroke();
+    const dx = align === 'left' ? -(r + 5) : (r + 5);
+    label(c, txt, gx + dx, gy - r - 3, ink, 13, align === 'left' ? 'right' : 'left');
+  };
+  ball(T2x,T2y,'m₂',15,'right'); ball(T3x,T3y,'m₃',15,'right');
+  ball(Bx,By,'m₁',15,'left');
+  label(c, 'B', X(Bx,By), Y(Bx,By)+23, muted, 12, 'center');
+
+  // ---- a csukló ----
+  c.fillStyle = css('--panel'); c.strokeStyle = ink; c.lineWidth = 2;
+  c.beginPath(); c.arc(X(0,0), Y(0,0), 6, 0, 7); c.fill(); c.stroke();
+  label(c, 'A', X(0,0)-16, Y(0,0)+12, ink, 13);
+
+  // ---- szögkitérés a B pontnál ----
+  const rArc = sc*p.l*1.04;
+  c.strokeStyle = css('--ok'); c.lineWidth = 1.6;
+  c.beginPath(); c.arc(X(0,0), Y(0,0), rArc, 0, Ps, Ps < 0); c.stroke();
+  label(c, 'Ψ', X(0,0) + (rArc+20)*Math.cos(Ps/2),
+              Y(0,0) + (rArc+20)*Math.sin(Ps/2), css('--ok'), 13, 'center');
+
+  // ---- sebesség- és gyorsulásvektor a B pont fölött ----
+  const tx = -Math.sin(Ps), ty = -Math.cos(Ps);
+  const vlen = 86 * (st.dP/Math.max(s.dPmax, 1e-12));
+  const alen = 86 * (st.ddP/Math.max(s.ddPmax, 1e-12));
+  const bx = X(Bx,By), by = Y(Bx,By);
+  if (Math.abs(vlen) > 1.5){
+    const sx = bx, sy = by-34, ex = sx+vlen*tx, ey = sy-vlen*ty;
+    arrow(c, sx, sy, ex, ey, css('--vel'), 8, 3);
+    label(c, 'v_B', ex+8, ey, css('--vel'), 13);
+  }
+  if (Math.abs(alen) > 1.5){
+    const sx = bx, sy = by-60, ex = sx+alen*tx, ey = sy-alen*ty;
+    arrow(c, sx, sy, ex, ey, css('--acc'), 8, 3);
+    label(c, 'a_B', ex+8, ey, css('--acc'), 13);
+  }
+
+  // ---- nehézségi gyorsulás ----
+  arrow(c, w-42, 26, w-42, 58, css('--nrm'), 6, 2);
+  label(c, 'g = 9,81 m/s²', w-34, 44, css('--nrm'), 13);
+
+  // ---- a rugó állapota ----
+  if (st.Fr < 0){
+    c.fillStyle = css('--bad'); c.font = '600 12px -apple-system,sans-serif';
+    c.textAlign = 'right'; c.textBaseline = 'top';
+    c.fillText('a rugó nyomott: F_r = ' + fmt(st.Fr,1) + ' N', w-12, 12);
+  }
+}
+
+/* ---------- rajzolás: foronómiai görbék ---------- */
+const NPER = 6;      // hány periódust mutasson az animáció és a görbék
+
+function drawForon(p, s, tNow){
+  const {c, w, h} = setup($('foron'));
+  const ink = css('--ink'), muted = css('--muted'), line = css('--line');
+
+  const padL = 52, padR = 12, padT = 8, gap = 11;
+  const ph = (h - padT - 16 - 3*gap) / 4;
+  const T = NPER*s.Tn;
+  const XT = t => padL + (w-padL-padR) * (t/T);
+
+  const panels = [
+    {f: t => Pof(s,t),      A: s.A,      cim:'Ψ',  egys:'rad',    col:'#15803d', d:4},
+    {f: t => dPof(s,t),     A: s.dPmax,  cim:'Ψ̇',  egys:'rad/s',  col:'#2563eb', d:3},
+    {f: t => ddPof(s,t),    A: s.ddPmax, cim:'Ψ̈',  egys:'rad/s²', col:'#dc2626', d:2},
+    {f: t => Frof(p,s,t),   A: Math.max(Math.abs(s.Frmax), Math.abs(s.Frmin)),
+     cim:'F_r', egys:'N', col:'#7c3aed', d:1, off: s.Frst},
+  ];
+
+  panels.forEach((pl, i) => {
+    const y0 = padT + i*(ph+gap), yc = y0 + ph/2;
+    const A = Math.max(pl.A, 1e-12);
+    const Y = v => yc - (v/A) * (ph/2 - 5);
+
+    // keret + nulla vonal
+    c.strokeStyle = line; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(padL, y0); c.lineTo(padL, y0+ph); c.stroke();
+    c.save(); c.setLineDash([3,3]);
+    c.beginPath(); c.moveTo(padL, yc); c.lineTo(w-padR, yc); c.stroke(); c.restore();
+
+    // T_n osztás
+    c.save(); c.setLineDash([2,4]); c.strokeStyle = line;
+    for (let q = 1; q < NPER; q++){
+      c.beginPath(); c.moveTo(XT(q*s.Tn), y0); c.lineTo(XT(q*s.Tn), y0+ph); c.stroke();
+    }
+    c.restore();
+
+    // a statikus rugóerő szintje
+    if (pl.off !== undefined){
+      c.save(); c.setLineDash([5,3]); c.strokeStyle = css('--muted'); c.lineWidth = 1;
+      c.beginPath(); c.moveTo(padL, Y(pl.off)); c.lineTo(w-padR, Y(pl.off)); c.stroke();
+      c.restore();
+    }
+
+    // görbe
+    c.strokeStyle = pl.col; c.lineWidth = 1.7; c.beginPath();
+    for (let j=0; j<=280; j++){
+      const t = T*j/280, px = XT(t), py = Y(pl.f(t));
+      j ? c.lineTo(px, py) : c.moveTo(px, py);
+    }
+    c.stroke();
+
+    // feliratok
+    label(c, pl.cim, 4, yc-7, ink, 12);
+    c.fillStyle = muted; c.font = '9.5px ui-monospace, Menlo, monospace';
+    c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.fillText('[' + pl.egys + ']', 4, yc+7);
+    c.textAlign = 'right';
+    c.fillText(fmt(pl.A, pl.d), padL-3, Y(A));
+    c.fillText('0', padL-3, yc);
+
+    // időkurzor
+    if (tNow >= 0 && tNow <= T){
+      c.strokeStyle = css('--accent2'); c.lineWidth = 1.3;
+      c.beginPath(); c.moveTo(XT(tNow), y0); c.lineTo(XT(tNow), y0+ph); c.stroke();
+      c.fillStyle = css('--accent2');
+      c.beginPath(); c.arc(XT(tNow), Y(pl.f(tNow)), 3.2, 0, 7); c.fill();
+    }
+  });
+
+  // időtengely
+  c.strokeStyle = muted; c.lineWidth = 1;
+  const yA = h-13;
+  c.beginPath(); c.moveTo(padL, yA); c.lineTo(w-padR, yA); c.stroke();
+  c.fillStyle = muted; c.font = '9.5px ui-monospace, Menlo, monospace';
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  c.fillText('0', padL, yA+2);
+  for (let q = 1; q <= NPER; q++)
+    c.fillText((q === 1 ? '' : q) + 'Tₙ', XT(q*s.Tn) - (q === NPER ? 8 : 0), yA+2);
+  c.textAlign = 'right';
+  c.fillText('t [s]', w-padR, yA-11);
+}
+
+/* ---------- animációs állapot ---------- */
+let raf = null, running = false, t = 0, last = 0, P = null, S = null;
+
+function state(){
+  return {t, P: Pof(S,t), dP: dPof(S,t), ddP: ddPof(S,t), Fr: Frof(P,S,t)};
+}
+
+function phaseText(st){
+  const s = S, tol = 0.02*s.A;
+  let hol;
+  if (st.P >  s.A - tol) hol = 'alsó szélső helyzet';
+  else if (st.P < -s.A + tol) hol = 'felső szélső helyzet';
+  else if (Math.abs(st.P) < tol) hol = 'áthalad az egyensúlyi helyzeten';
+  else hol = st.dP > 0 ? 'lefelé mozog' : 'felfelé mozog';
+  return `t = ${fmt(st.t,4)} s — ${hol}; Ψ = ${fmt(st.P,5)} rad, ` +
+         `Ψ̇ = ${fmt(st.dP,4)} rad/s, F_r = ${fmt(st.Fr,1)} N` +
+         (st.Fr < 0 ? ' (nyomott)' : '');
+}
+
+function frame(now){
+  if (!last) last = now;
+  const dt = Math.min(0.05, (now - last)/1000);
+  last = now;
+  if (running) t += dt / parseFloat($('slow').value);
+
+  const st = state();
+  drawScene(P, S, st);
+  drawForon(P, S, st.t);
+  $('phase').textContent = phaseText(st);
+
+  if (t > NPER*S.Tn) { running = false; t = NPER*S.Tn; }
+  raf = requestAnimationFrame(frame);
+}
+
+/* ---------- vezérlés ---------- */
+function recompute(){
+  const p = readParams();
+  let msg = validate(p);
+  $('warn').textContent = msg;
+  if (msg) return false;
+  const s = solve(p);
+  if (!s.stabil){
+    $('warn').textContent =
+      'k_t = ' + fmt(s.kt,2) + ' Nm/rad ≤ 0: az egyensúlyi helyzet instabil, ' +
+      'nem jön létre rezgés (a felül lévő tömeg legyőzi a rugót).';
+    return false;
+  }
+  P = p; S = s;
+  showResults(P, S);
+  const st = state();
+  drawScene(P, S, st);
+  drawForon(P, S, st.t);
+  return true;
+}
+function restart(){ if (recompute()) { t = 0; last = 0; running = true; } }
+
+$('run').onclick   = restart;
+$('reset').onclick = () => { running = false; t = 0; last = 0; recompute();
+                             $('phase').textContent = 'Kiindulási helyzet.'; };
+$('pause').onclick = () => { running = !running; $('pause').textContent = running ? 'Szünet' : 'Folytatás'; };
+$('slow').oninput  = () => $('slowTxt').textContent = $('slow').value + '×';
+
+window.addEventListener('resize', () => {
+  if (P) { const st = state(); drawScene(P,S,st); drawForon(P,S,st.t); }
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (P) { const st = state(); drawScene(P,S,st); drawForon(P,S,st.t); }
+});
+
+buildControls();
+recompute();
+raf = requestAnimationFrame(frame);
+</script>
+</body>
+</html>
