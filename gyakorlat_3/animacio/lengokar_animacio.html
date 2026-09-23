@@ -67,7 +67,7 @@
 <div class="wrap">
 
 <h1>Egy szabadsági fokú lengőkar szabad rezgése</h1>
-<p class="sub">Rezgéstan, 3. gyakorlat — interaktív animáció és foronómiai görbék</p>
+<p class="sub">Rezgéstan, 3. gyakorlat — interaktív animáció és időfüggvények</p>
 
 <div class="grid">
 
@@ -100,9 +100,9 @@
       <div class="phase">Szögnagyítás: <b id="nagyTxt">1×</b> · amplitúdó: <b id="ampTxt">—</b></div>
     </div>
 
-    <div class="two" style="margin-top:16px">
+    <div style="margin-top:16px">
       <div class="card">
-        <h2>Foronómiai görbék</h2>
+        <h2>Szögkitérés és rugóerő</h2>
         <canvas id="foron" height="330"></canvas>
       </div>
     </div>
@@ -226,34 +226,30 @@ function validate(p){
 
 /* ---------- eredménytáblázat ---------- */
 function showResults(p, s){
+  const c2Tag = s.C2 < 0
+    ? ' − ' + fmt(Math.abs(s.C2), 4)
+    : ' + ' + fmt(s.C2, 4);
   const rows = [
-    ['sec','A redukált modell',''],
-    ['','Θ_a = m₁l² + (m₂+m₃)h²',       fmt(s.Th, 4) + ' kgm²'],
-    ['','(m₃−m₂)gh',                    fmt(s.Mg, 3) + ' Nm/rad'],
-    ['','ka²',                          fmt(s.Mk, 1) + ' Nm/rad'],
-    ['','k_t = (m₃−m₂)gh + ka²',        fmt(s.kt, 3) + ' Nm/rad'],
-    ['sec','A lengőrendszer',''],
-    ['','ω_n = √(k_t/Θ_a)',             fmt(s.wn, 4) + ' rad/s'],
+    ['sec','a) Mozgásegyenlet',''],
+    ['formula','φ̈ + [((m₃−m₂)gh + ka²)/Θ_A]φ = 0',''],
+    ['','Θ_A = m₁l² + (m₂+m₃)h²',       fmt(s.Th, 4) + ' kgm²'],
+    ['sec','b) Sajátkörfrekvencia, sajátfrekvencia és periódusidő',''],
+    ['','ω_n = √(k_t/Θ_A)',             fmt(s.wn, 4) + ' rad/s'],
     ['','f_n = ω_n/2π',                 fmt(s.fn, 4) + ' Hz'],
     ['','T_n = 2π/ω_n',                 fmt(s.Tn, 5) + ' s'],
-    ['sec','Az előfeszítés',''],
-    ['','M_r,st = m₁gl',                fmt(s.Mrst, 3) + ' Nm'],
-    ['','F_r,st = m₁gl/a',              fmt(s.Frst, 3) + ' N'],
-    ['','φ_st = M_r,st/(ka²)',          fmt(s.phist, 5) + ' rad'],
-    ['','a·φ_st  (rugónyúlás)',         fmt(s.dstat*1000, 3) + ' mm'],
-    ['sec','Kezdeti feltételek',''],
-    ['','Ψ₀ = −y_B0/l',                 fmt(s.P0, 4) + ' rad'],
-    ['','ω₀ = −v_By0/l',                fmt(s.w0, 4) + ' rad/s'],
-    ['','C₁ = Ψ₀',                      fmt(s.C1, 4) + ' rad'],
+    ['sec','c) Mozgástörvény',''],
+    ['','C₁ = φ₀',                      fmt(s.C1, 4) + ' rad'],
     ['','C₂ = ω₀/ω_n',                  fmt(s.C2, 4) + ' rad'],
-    ['sec','A rezgés',''],
-    ['','A = √(C₁²+C₂²)',               fmt(s.A, 4) + ' rad'],
-    ['','ε = arctg(C₁/C₂)',             fmt(s.eps, 4) + ' rad'],
-    ['sec','A rugóerő',''],
-    ['','F_r,max = F_r,st + kaA',       fmt(s.Frmax, 2) + ' N'],
+    ['','Φ = √(C₁²+C₂²)',               fmt(s.A, 4) + ' rad'],
+    ['','δ = arctg(C₁/C₂)',             fmt(s.eps, 4) + ' rad'],
+    ['formula',`φ(t) = ${fmt(s.C1,4)} cos(${fmt(s.wn,4)}t)${c2Tag} sin(${fmt(s.wn,4)}t) rad`,''],
+    ['sec','d) Legnagyobb rugóerő',''],
+    ['','F_r,st = m₁gl/a',              fmt(s.Frst, 3) + ' N'],
+    ['','F_r,max = F_r,st + kaΦ',       fmt(s.Frmax, 2) + ' N'],
   ];
   $('out').innerHTML = rows.map(([cls,k,v]) =>
     cls === 'sec' ? `<tr><td class="sec" colspan="2">${k}</td></tr>`
+      : cls === 'formula' ? `<tr><td class="k" colspan="2"><code>${k}</code></td></tr>`
                   : `<tr><td class="k">${k}</td><td class="v">${v}</td></tr>`).join('');
 }
 
@@ -386,7 +382,7 @@ function drawScene(p, s, st){
   const anchY = spr;                                     // a felfüggesztés magassága (m)
   hatch(c, X(p.a,0)-26, Y(0,anchY)-13, 52, 13, muted);
   spring(c, X(p.a,anchY), Y(p.a,anchY), X(Sx,Sy), Y(Sx,Sy),
-         st.Fr >= 0 ? css('--accent') : css('--bad'), 8, 8);
+         css('--accent'), 8, 8);
   label(c, 'k', X(p.a,0)+13, (Y(0,anchY)+Y(Sx,Sy))/2, css('--accent'), 13);
 
   // ---- tömegek ----
@@ -433,17 +429,10 @@ function drawScene(p, s, st){
 
   // ---- nehézségi gyorsulás ----
   arrow(c, w-42, 26, w-42, 58, css('--nrm'), 6, 2);
-  label(c, 'g = 9,81 m/s²', w-34, 44, css('--nrm'), 13);
-
-  // ---- a rugó állapota ----
-  if (st.Fr < 0){
-    c.fillStyle = css('--bad'); c.font = '600 12px -apple-system,sans-serif';
-    c.textAlign = 'right'; c.textBaseline = 'top';
-    c.fillText('a rugó nyomott: F_r = ' + fmt(st.Fr,1) + ' N', w-12, 12);
-  }
+  label(c, 'g = 9,81 m/s²', w-54, 44, css('--nrm'), 13, 'right');
 }
 
-/* ---------- rajzolás: foronómiai görbék ---------- */
+/* ---------- rajzolás: időfüggvények ---------- */
 const NPER = 6;      // hány periódust mutasson az animáció és a görbék
 
 function drawForon(p, s, tNow){
@@ -451,16 +440,14 @@ function drawForon(p, s, tNow){
   const ink = css('--ink'), muted = css('--muted'), line = css('--line');
 
   const padL = 52, padR = 12, padT = 8, gap = 11;
-  const ph = (h - padT - 16 - 3*gap) / 4;
+  const ph = (h - padT - 16 - gap) / 2;
   const T = NPER*s.Tn;
   const XT = t => padL + (w-padL-padR) * (t/T);
 
   const panels = [
-    {f: t => Pof(s,t),      A: s.A,      cim:'Ψ',  egys:'rad',    col:'#15803d', d:4},
-    {f: t => dPof(s,t),     A: s.dPmax,  cim:'Ψ̇',  egys:'rad/s',  col:'#2563eb', d:3},
-    {f: t => ddPof(s,t),    A: s.ddPmax, cim:'Ψ̈',  egys:'rad/s²', col:'#dc2626', d:2},
+    {f: t => Pof(s,t),      A: s.A,      cim:'φ(t)',  egys:'rad', col:'#15803d', d:4},
     {f: t => Frof(p,s,t),   A: Math.max(Math.abs(s.Frmax), Math.abs(s.Frmin)),
-     cim:'F_r', egys:'N', col:'#7c3aed', d:1, off: s.Frst},
+     cim:'F_r(t)', egys:'N', col:'#7c3aed', d:1, off: s.Frst},
   ];
 
   panels.forEach((pl, i) => {
@@ -542,8 +529,7 @@ function phaseText(st){
   else if (Math.abs(st.P) < tol) hol = 'áthalad az egyensúlyi helyzeten';
   else hol = st.dP > 0 ? 'lefelé mozog' : 'felfelé mozog';
   return `t = ${fmt(st.t,4)} s — ${hol}; Ψ = ${fmt(st.P,5)} rad, ` +
-         `Ψ̇ = ${fmt(st.dP,4)} rad/s, F_r = ${fmt(st.Fr,1)} N` +
-         (st.Fr < 0 ? ' (nyomott)' : '');
+         `Ψ̇ = ${fmt(st.dP,4)} rad/s, F_r = ${fmt(st.Fr,1)} N`;
 }
 
 function frame(now){
